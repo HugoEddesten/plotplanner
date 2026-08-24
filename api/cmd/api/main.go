@@ -10,7 +10,9 @@ import (
 	"plotplanner/internal/email"
 	"plotplanner/internal/invites"
 	"plotplanner/internal/jwt"
+	"plotplanner/internal/plants"
 	"plotplanner/internal/plots"
+	"plotplanner/internal/timeline"
 	"plotplanner/internal/users"
 
 	"github.com/gofiber/fiber/v2"
@@ -41,10 +43,14 @@ func main() {
 	usersRepo := &users.Repository{DB: database.Pool}
 	plotsRepo := &plots.Repository{DB: database.Pool}
 	invitesRepo := &invites.Repository{DB: database.Pool}
+	plantsRepo := &plants.Repository{DB: database.Pool}
+	timelineRepo := &timeline.Repository{DB: database.Pool}
 	emailSvc := email.New()
 
 	auth.RegisterRoutes(app, usersRepo, plotsRepo, invitesRepo, emailSvc, jwtService)
 	plots.RegisterRoutes(app, plotsRepo, usersRepo, invitesRepo, emailSvc, jwtMiddleware)
+	plants.RegisterRoutes(app, plantsRepo, plotsRepo, jwtMiddleware)
+	timeline.RegisterRoutes(app, timelineRepo, plantsRepo, jwtMiddleware)
 
 	if err := app.Listen(":3001"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

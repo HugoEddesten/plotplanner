@@ -1,6 +1,7 @@
 import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { theme } from "./theme";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -8,6 +9,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import CreatePlotPage from "./pages/CreatePlotPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PlotPage from "./pages/PlotPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
@@ -19,13 +21,14 @@ const router = createBrowserRouter([
     children: [
       { path: "/dashboard", element: <DashboardPage /> },
       { path: "/plots/new", element: <CreatePlotPage /> },
+      { path: "/plots/:id", element: <PlotPage /> }
     ],
   },
 ]);
 
 export default function App() {
   return (
-    <MantineProvider>
+    <MantineProvider theme={theme} defaultColorScheme="light">
       <RouterProvider router={router} />
     </MantineProvider>
   );

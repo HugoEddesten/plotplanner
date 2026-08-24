@@ -21,6 +21,13 @@ export function usePlots() {
   });
 }
 
+export function usePlot(id: number) {
+  return useQuery<Plot>({
+    queryKey: ["plots", id],
+    queryFn: () => api.get<Plot>(`/plots/${id}`).then((r) => r.data),
+  });
+}
+
 export function useCreatePlot() {
   const queryClient = useQueryClient();
   return useMutation({
