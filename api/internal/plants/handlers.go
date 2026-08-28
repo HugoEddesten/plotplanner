@@ -11,6 +11,36 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// FindPlotPlantForUser resolves and authorizes the plot_plant referenced by
+// the :id (plot) and :plantId (plot_plant) route params for the current
+// user. It works regardless of archived state, so it's also used by the
+// timeline routes to reach a plot_plant's history after it's archived.
+func FindPlotPlantForUser(c *fiber.Ctx, repo *Repository) (*PlotPlant, error) {
+	plotId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid plot ID")
+	}
+	plotPlantId, err := strconv.Atoi(c.Params("plantId"))
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid plant ID")
+	}
+
+	userId := locals.UserId(c)
+
+	pp, err := repo.FindByIdForUser(plotPlantId, userId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fiber.NewError(fiber.StatusNotFound, "Plant not found")
+		}
+		return nil, fiber.NewError(fiber.StatusInternalServerError)
+	}
+	if pp.PlotId != plotId {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Plant not found")
+	}
+
+	return pp, nil
+}
+
 func SearchPlants(repo *Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		q := c.Query("q")
@@ -103,6 +133,50 @@ func ListPlotPlants(repo *Repository, plotRepo *plots.Repository) fiber.Handler 
 			return c.JSON([]PlotPlant{})
 		}
 		return c.JSON(plotPlants)
+	}
+}
+
+func ListArchivedPlotPlants(repo *Repository, plotRepo *plots.Repository) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		plotId, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid plot ID")
+		}
+
+		userId := locals.UserId(c)
+
+		if _, err := plotRepo.FindByIdForUser(plotId, userId); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fiber.NewError(fiber.StatusNotFound, "Plot not found")
+			}
+			return fiber.NewError(fiber.StatusInternalServerError)
+		}
+
+		plotPlants, err := repo.ListArchivedForPlot(plotId)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Could not fetch archived plants")
+		}
+
+		if plotPlants == nil {
+			return c.JSON([]PlotPlant{})
+		}
+		return c.JSON(plotPlants)
+	}
+}
+
+func ArchivePlotPlant(repo *Repository) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		pp, err := FindPlotPlantForUser(c, repo)
+		if err != nil {
+			return err
+		}
+
+		archived, err := repo.Archive(pp.Id)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Could not archive plant")
+		}
+
+		return c.JSON(archived)
 	}
 }
 

@@ -11,6 +11,23 @@ export interface TimelineEntry {
   updated_at: string;
 }
 
+export interface PlotFeedEntry extends TimelineEntry {
+  plant_name: string;
+  col: number;
+  row: number;
+  is_archived: boolean;
+}
+
+export function usePlotFeed(plotId: number, limit = 8) {
+  return useQuery<PlotFeedEntry[]>({
+    queryKey: ["plots", plotId, "timeline", limit],
+    queryFn: () =>
+      api
+        .get<PlotFeedEntry[]>(`/plots/${plotId}/timeline`, { params: { limit } })
+        .then((r) => r.data ?? []),
+  });
+}
+
 export function usePlantTimeline(plotId: number, plotPlantId: number | null) {
   return useQuery<TimelineEntry[]>({
     queryKey: ["plots", plotId, "plants", plotPlantId, "timeline"],
@@ -43,8 +60,10 @@ export function useCreateTimelineEntry(plotId: number) {
           notes,
         })
         .then((r) => r.data),
-    onSuccess: (entry) =>
-      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants", entry.plot_plant_id, "timeline"] }),
+    onSuccess: (entry) => {
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants", entry.plot_plant_id, "timeline"] });
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "timeline"] });
+    },
   });
 }
 
@@ -53,7 +72,9 @@ export function useDeleteTimelineEntry(plotId: number, plotPlantId: number) {
   return useMutation({
     mutationFn: (entryId: number) =>
       api.delete(`/plots/${plotId}/plants/${plotPlantId}/timeline/${entryId}`),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants", plotPlantId, "timeline"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants", plotPlantId, "timeline"] });
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "timeline"] });
+    },
   });
 }

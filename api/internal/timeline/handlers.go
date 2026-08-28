@@ -7,42 +7,60 @@ import (
 
 	"plotplanner/internal/locals"
 	"plotplanner/internal/plants"
+	"plotplanner/internal/plots"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5"
 )
 
-// findPlotPlant resolves and authorizes the plot_plant referenced by the
-// :id (plot) and :plantId (plot_plant) route params for the current user.
-func findPlotPlant(c *fiber.Ctx, plantsRepo *plants.Repository) (*plants.PlotPlant, error) {
-	plotId, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid plot ID")
-	}
-	plotPlantId, err := strconv.Atoi(c.Params("plantId"))
-	if err != nil {
-		return nil, fiber.NewError(fiber.StatusBadRequest, "Invalid plant ID")
-	}
+const (
+	defaultFeedLimit = 8
+	maxFeedLimit     = 50
+)
 
-	userId := locals.UserId(c)
-
-	pp, err := plantsRepo.FindByIdForUser(plotPlantId, userId)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fiber.NewError(fiber.StatusNotFound, "Plant not found")
+func ListPlotFeed(repo *Repository, plotsRepo *plots.Repository) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		plotId, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid plot ID")
 		}
-		return nil, fiber.NewError(fiber.StatusInternalServerError)
-	}
-	if pp.PlotId != plotId {
-		return nil, fiber.NewError(fiber.StatusNotFound, "Plant not found")
-	}
 
-	return pp, nil
+		userId := locals.UserId(c)
+
+		if _, err := plotsRepo.FindByIdForUser(plotId, userId); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fiber.NewError(fiber.StatusNotFound, "Plot not found")
+			}
+			return fiber.NewError(fiber.StatusInternalServerError)
+		}
+
+		limit := defaultFeedLimit
+		if raw := c.Query("limit"); raw != "" {
+			parsed, err := strconv.Atoi(raw)
+			if err != nil || parsed < 1 {
+				return fiber.NewError(fiber.StatusBadRequest, "Invalid limit")
+			}
+			limit = parsed
+		}
+		if limit > maxFeedLimit {
+			limit = maxFeedLimit
+		}
+
+		entries, err := repo.ListForPlot(plotId, limit)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Could not fetch activity")
+		}
+
+		if entries == nil {
+			return c.JSON([]FeedEntry{})
+		}
+		return c.JSON(entries)
+	}
 }
 
 func ListEntries(repo *Repository, plantsRepo *plants.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pp, err := findPlotPlant(c, plantsRepo)
+		pp, err := plants.FindPlotPlantForUser(c, plantsRepo)
 		if err != nil {
 			return err
 		}
@@ -61,7 +79,7 @@ func ListEntries(repo *Repository, plantsRepo *plants.Repository) fiber.Handler 
 
 func CreateEntry(repo *Repository, plantsRepo *plants.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pp, err := findPlotPlant(c, plantsRepo)
+		pp, err := plants.FindPlotPlantForUser(c, plantsRepo)
 		if err != nil {
 			return err
 		}
@@ -95,7 +113,7 @@ func CreateEntry(repo *Repository, plantsRepo *plants.Repository) fiber.Handler 
 
 func UpdateEntry(repo *Repository, plantsRepo *plants.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pp, err := findPlotPlant(c, plantsRepo)
+		pp, err := plants.FindPlotPlantForUser(c, plantsRepo)
 		if err != nil {
 			return err
 		}
@@ -132,7 +150,7 @@ func UpdateEntry(repo *Repository, plantsRepo *plants.Repository) fiber.Handler 
 
 func DeleteEntry(repo *Repository, plantsRepo *plants.Repository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		pp, err := findPlotPlant(c, plantsRepo)
+		pp, err := plants.FindPlotPlantForUser(c, plantsRepo)
 		if err != nil {
 			return err
 		}

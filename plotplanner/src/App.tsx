@@ -10,6 +10,7 @@ import DashboardPage from "./pages/DashboardPage";
 import CreatePlotPage from "./pages/CreatePlotPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PlotPage from "./pages/PlotPage";
+import PlotHistoryPage from "./pages/PlotHistoryPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
@@ -21,7 +22,8 @@ const router = createBrowserRouter([
     children: [
       { path: "/dashboard", element: <DashboardPage /> },
       { path: "/plots/new", element: <CreatePlotPage /> },
-      { path: "/plots/:id", element: <PlotPage /> }
+      { path: "/plots/:id", element: <PlotPage /> },
+      { path: "/plots/:id/history", element: <PlotHistoryPage /> }
     ],
   },
 ]);

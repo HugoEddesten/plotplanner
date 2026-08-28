@@ -50,7 +50,7 @@ func main() {
 	auth.RegisterRoutes(app, usersRepo, plotsRepo, invitesRepo, emailSvc, jwtService)
 	plots.RegisterRoutes(app, plotsRepo, usersRepo, invitesRepo, emailSvc, jwtMiddleware)
 	plants.RegisterRoutes(app, plantsRepo, plotsRepo, jwtMiddleware)
-	timeline.RegisterRoutes(app, timelineRepo, plantsRepo, jwtMiddleware)
+	timeline.RegisterRoutes(app, timelineRepo, plantsRepo, plotsRepo, jwtMiddleware)
 
 	if err := app.Listen(":3001"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

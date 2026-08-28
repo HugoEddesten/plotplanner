@@ -17,6 +17,7 @@ export interface PlotPlant {
   col: number;
   row: number;
   plant_name: string;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +39,14 @@ export function usePlotPlants(plotId: number) {
   });
 }
 
+export function useArchivedPlotPlants(plotId: number) {
+  return useQuery<PlotPlant[]>({
+    queryKey: ["plots", plotId, "plants", "archived"],
+    queryFn: () =>
+      api.get<PlotPlant[]>(`/plots/${plotId}/plants/archived`).then((r) => r.data ?? []),
+  });
+}
+
 export function usePlantOnCell(plotId: number) {
   const qc = useQueryClient();
   return useMutation({
@@ -47,11 +56,27 @@ export function usePlantOnCell(plotId: number) {
   });
 }
 
+export function useArchivePlotPlant(plotId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (plotPlantId: number) =>
+      api.post<PlotPlant>(`/plots/${plotId}/plants/${plotPlantId}/archive`).then((r) => r.data),
+    onSuccess: () => {
+      // Prefix match — also invalidates ["plots", plotId, "plants", "archived"].
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants"] });
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "timeline"] });
+    },
+  });
+}
+
 export function useRemoveFromCell(plotId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ col, row }: { col: number; row: number }) =>
       api.delete(`/plots/${plotId}/plants`, { params: { col, row } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["plots", plotId, "plants"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "plants"] });
+      qc.invalidateQueries({ queryKey: ["plots", plotId, "timeline"] });
+    },
   });
 }

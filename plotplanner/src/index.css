@@ -24,11 +24,11 @@
   --green-800: #2b4a2c;
 
   /* ── Earth / cream scale ─────────────────────────────────── */
-  --earth-50:  #f7f5f0;
+  --earth-50:  #faf8f4;
   --earth-100: #f5ecd8;
   --earth-200: #e8d5a8;
-  --earth-300: #d6cfc4;
-  --earth-400: #e4ddd2;
+  --earth-300: #e2dacd;
+  --earth-400: #ece5d9;
   --earth-500: #d4a96a;
 
   /* ── Brown ─────────────────────────────────── */
@@ -97,4 +97,72 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* ── Archive fold-and-fly animation ───────────────────────────
+   Used by ArchiveFlyClone.tsx: a fixed-position clone of the cell
+   modal is positioned over its real spot, then flown toward the
+   History button using a translate/scale delta supplied as
+   --dx / --dy / --s custom properties. A squash partway through
+   sells the "fold" before it shrinks away. */
+@keyframes archive-fly {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  32% {
+    transform: translate(calc(var(--dx) * 0.1), calc(var(--dy) * 0.06)) scale(1.03, 0.84) rotate(-3deg);
+    opacity: 1;
+  }
+  68% {
+    transform: translate(calc(var(--dx) * 0.6), calc(var(--dy) * 0.62))
+      scale(calc(var(--s) * 2.2), calc(var(--s) * 1.5)) rotate(5deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+.archive-fly-clone {
+  animation: archive-fly 680ms cubic-bezier(0.55, 0, 0.2, 1) forwards;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+@keyframes archive-fade {
+  to {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+}
+
+.archive-fly-clone.archive-fly-reduced {
+  animation: archive-fade 180ms ease forwards;
+}
+
+@keyframes archive-landing-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(43 74 44 / 0.35);
+  }
+  45% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 10px rgb(43 74 44 / 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(43 74 44 / 0);
+  }
+}
+
+.archive-landing-pulse {
+  animation: archive-landing-pulse 620ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archive-landing-pulse {
+    animation: none;
+  }
 }

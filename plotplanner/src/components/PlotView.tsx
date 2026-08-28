@@ -1,8 +1,8 @@
 import { useState, useId } from "react";
 import type { Point } from "../hooks/usePlots";
 
-const PAD = 8;
-const BORDER_WIDTH = 2;
+const PAD = 0;
+const BORDER_WIDTH = 0;
 
 export type CellStatus = "empty" | "planted" | "blocked";
 
@@ -48,6 +48,54 @@ function resolveFill(state: CellState, hovered: boolean): string {
   return hovered ? HOVER_FILL[state.status] : BASE_FILL[state.status];
 }
 
+export interface GridInfo {
+  cols: number;
+  rows: number;
+  cellW: number;
+  cellH: number;
+  minX: number;
+  minY: number;
+  plotW: number;
+  plotH: number;
+  insideCells: { col: number; row: number; x: number; y: number }[];
+}
+
+/**
+ * Pure geometry shared with PlotView's render — lets callers (e.g. a stats
+ * strip) know how many cells the polygon actually contains without
+ * duplicating the ray-casting logic.
+ */
+export function computeGrid(shape: Point[], targetCols = 10): GridInfo | null {
+  if (shape.length < 3) return null;
+
+  const minX = Math.min(...shape.map((p) => p.x));
+  const minY = Math.min(...shape.map((p) => p.y));
+  const maxX = Math.max(...shape.map((p) => p.x));
+  const maxY = Math.max(...shape.map((p) => p.y));
+
+  const plotW = maxX - minX;
+  const plotH = maxY - minY;
+
+  // Derive cell dimensions that tile the bounding box exactly
+  const cols = Math.max(1, targetCols);
+  const cellW = plotW / cols;
+  const rows = Math.max(1, Math.round(plotH / cellW));
+  const cellH = plotH / rows;
+
+  const insideCells: { col: number; row: number; x: number; y: number }[] = [];
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      const cx = minX + (c + 0.5) * cellW;
+      const cy = minY + (r + 0.5) * cellH;
+      if (insidePolygon({ x: cx, y: cy }, shape)) {
+        insideCells.push({ col: c, row: r, x: minX + c * cellW, y: minY + r * cellH });
+      }
+    }
+  }
+
+  return { cols, rows, cellW, cellH, minX, minY, plotW, plotH, insideCells };
+}
+
 export interface PlotViewProps {
   shape: Point[];
   /**
@@ -66,7 +114,9 @@ export default function PlotView({ shape, cols: targetCols = 10, cells = {}, onC
   const clipId = useId();
   const borderMaskId = clipId + "m";
 
-  if (shape.length < 3) {
+  const grid = computeGrid(shape, targetCols);
+
+  if (!grid) {
     return (
       <div
         className={`w-full border border-[--color-border] flex items-center justify-center py-24 ${className ?? ""}`}
@@ -77,31 +127,8 @@ export default function PlotView({ shape, cols: targetCols = 10, cells = {}, onC
     );
   }
 
-  const minX = Math.min(...shape.map((p) => p.x));
-  const minY = Math.min(...shape.map((p) => p.y));
-  const maxX = Math.max(...shape.map((p) => p.x));
-  const maxY = Math.max(...shape.map((p) => p.y));
-
-  const plotW = maxX - minX;
-  const plotH = maxY - minY;
-
-  // Derive cell dimensions that tile the bounding box exactly
-  const cols = Math.max(1, targetCols);
-  const cellW = plotW / cols;
-  const rows = Math.max(1, Math.round(plotH / cellW));
-  const cellH = plotH / rows;
+  const { cellW, cellH, minX, minY, plotW, plotH, insideCells } = grid;
   const labelSize = Math.min(cellW, cellH) * 0.5;
-
-  const insideCells: { col: number; row: number; x: number; y: number }[] = [];
-  for (let c = 0; c < cols; c++) {
-    for (let r = 0; r < rows; r++) {
-      const cx = minX + (c + 0.5) * cellW;
-      const cy = minY + (r + 0.5) * cellH;
-      if (insidePolygon({ x: cx, y: cy }, shape)) {
-        insideCells.push({ col: c, row: r, x: minX + c * cellW, y: minY + r * cellH });
-      }
-    }
-  }
 
   const vbX = minX - PAD;
   const vbY = minY - PAD;
@@ -118,7 +145,7 @@ export default function PlotView({ shape, cols: targetCols = 10, cells = {}, onC
   return (
     <svg
       viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}
-      className={`w-full border border-[--color-border] ${className ?? ""}`}
+      className={`w-full border-4 ${className ?? ""}`}
       style={{ background: "var(--sage-100)" }}
     >
       <defs>

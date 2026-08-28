@@ -50,6 +50,40 @@ func (r *Repository) ListForPlotPlant(plotPlantId int) ([]Entry, error) {
 	return entries, nil
 }
 
+// ListForPlot returns the most recent timeline entries across every
+// plot_plant in a plot (active or archived) — the plot-wide activity feed.
+func (r *Repository) ListForPlot(plotId, limit int) ([]FeedEntry, error) {
+	rows, err := r.DB.Query(context.Background(),
+		`SELECT t.id, t.plot_plant_id, t.event_type, t.event_date, t.notes, t.created_at, t.updated_at,
+		        COALESCE(p.name, up.name) AS plant_name, pp.col, pp.row, pp.is_archived
+		 FROM plant_timeline t
+		 JOIN plot_plants pp ON pp.id = t.plot_plant_id
+		 LEFT JOIN plants p ON pp.plant_id = p.id
+		 LEFT JOIN user_plants up ON pp.user_plant_id = up.id
+		 WHERE pp.plot_id = $1
+		 ORDER BY t.event_date DESC, t.id DESC
+		 LIMIT $2`,
+		plotId, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []FeedEntry
+	for rows.Next() {
+		var e FeedEntry
+		if err := rows.Scan(
+			&e.Id, &e.PlotPlantId, &e.EventType, &e.EventDate, &e.Notes, &e.CreatedAt, &e.UpdatedAt,
+			&e.PlantName, &e.Col, &e.Row, &e.IsArchived,
+		); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
 // Update replaces event_type and notes, and updates event_date only when a
 // non-nil value is supplied (nil keeps the existing event_date).
 func (r *Repository) Update(id, plotPlantId int, eventType string, eventDate *time.Time, notes *string) (*Entry, error) {

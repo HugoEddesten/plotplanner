@@ -12,6 +12,8 @@ func RegisterRoutes(app *fiber.App, repo *Repository, plotsRepo *plots.Repositor
 
 	plotGroup := app.Group("/plots/:id/plants", jwtMiddleware)
 	plotGroup.Get("/", ListPlotPlants(repo, plotsRepo))
+	plotGroup.Get("/archived", ListArchivedPlotPlants(repo, plotsRepo))
 	plotGroup.Post("/", PlantOnCell(repo, plotsRepo))
+	plotGroup.Post("/:plantId/archive", ArchivePlotPlant(repo))
 	plotGroup.Delete("/", RemoveFromCell(repo, plotsRepo))
 }

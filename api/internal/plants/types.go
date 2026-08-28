@@ -26,6 +26,7 @@ type PlotPlant struct {
 	PlantId     *int      `json:"plant_id"`
 	UserPlantId *int      `json:"user_plant_id"`
 	PlantName   string    `json:"plant_name"`
+	IsArchived  bool      `json:"is_archived"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

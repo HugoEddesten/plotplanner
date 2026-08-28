@@ -8,9 +8,11 @@ import {
   Stack,
   Group,
   Skeleton,
+  Menu,
 } from "@mantine/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
+import { Plus, ChevronDown, LogOut } from "lucide-react";
 import { useMe } from "../hooks/useMe";
 import { usePlots, type Plot } from "../hooks/usePlots";
 import api from "../lib/api";
@@ -27,7 +29,7 @@ function PlotCard({ plot }: { plot: Plot }) {
     <Card
       padding="lg"
       radius="xl"
-      className="bg-surface! border! border-[--color-border]! cursor-pointer transition-shadow duration-200 hover:shadow-md"
+      className="bg-surface! border! border-[--color-border-subtle]! cursor-pointer transition-shadow duration-200 hover:shadow-md"
       onClick={() => navigate(`/plots/${plot.id}`)}
     >
       <Stack gap="xs">
@@ -58,6 +60,8 @@ export default function DashboardPage() {
     },
   });
 
+  const initial = me?.email?.[0]?.toUpperCase() ?? "?";
+
   return (
     <div className="min-h-screen bg-[--color-bg]">
       {/* Header */}
@@ -73,32 +77,58 @@ export default function DashboardPage() {
                 PlotPlanner
               </Text>
             </Link>
-            <Group gap="sm">
-              <Text size="sm" className="text-muted hidden sm:block">{me?.email}</Text>
-              <Button variant="subtle" size="sm" radius="xl" className="text-muted!" onClick={() => logout()}>
-                Log out
+            <Group gap="md">
+              <Button
+                radius="xl"
+                leftSection={<Plus size={16} />}
+                className="bg-primary!"
+                onClick={() => navigate("/plots/new")}
+              >
+                New plot
               </Button>
+
+              <div className="w-px h-6 bg-[--color-border]" />
+
+              <Menu shadow="md" width={220} position="bottom-end" offset={8}>
+                <Menu.Target>
+                  <button className="flex items-center gap-2 py-1 pl-1 pr-2 rounded-full border-none bg-transparent cursor-pointer hover:bg-accent-light transition-colors">
+                    <span className="w-8.5 h-8.5 rounded-full bg-primary-dark text-white flex items-center justify-center font-bold text-sm">
+                      {initial}
+                    </span>
+                    <ChevronDown size={16} className="text-muted" />
+                  </button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>
+                    <Text size="xs" fw={600} className="text-subtle uppercase" style={{ letterSpacing: "0.04em" }}>
+                      Signed in as
+                    </Text>
+                    <Text size="sm" fw={600} className="text-primary-dark" mt={2}>
+                      {me?.email}
+                    </Text>
+                  </Menu.Label>
+                  <Menu.Divider />
+                  <Menu.Item leftSection={<LogOut size={16} />} onClick={() => logout()}>
+                    Log out
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             </Group>
           </div>
         </Container>
       </header>
 
       <Container size="lg" py={48}>
-        <Group justify="space-between" align="flex-end" mb={32}>
-          <div>
-            <Title order={2} className="text-primary-dark" style={{ letterSpacing: "-0.5px" }}>
-              Your plots
-            </Title>
-            <Text className="text-muted mt-1">
-              {plots?.length
-                ? `${plots.length} plot${plots.length === 1 ? "" : "s"}`
-                : "No plots yet"}
-            </Text>
-          </div>
-          <Button radius="xl" className="bg-primary!" onClick={() => navigate("/plots/new")}>
-            + New plot
-          </Button>
-        </Group>
+        <div className="mb-8">
+          <Title order={2} className="text-primary-dark" style={{ letterSpacing: "-0.5px" }}>
+            Your plots
+          </Title>
+          <Text className="text-muted mt-1">
+            {plots?.length
+              ? `${plots.length} plot${plots.length === 1 ? "" : "s"}`
+              : "No plots yet"}
+          </Text>
+        </div>
 
         {plotsLoading ? (
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">

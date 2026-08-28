@@ -13,11 +13,13 @@ import {
   useDeleteTimelineEntry,
 } from "../hooks/usePlantTimeline";
 import { EVENT_LABELS, EVENT_COLORS } from "../lib/timelineEvents";
-import { Trash, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 interface Props {
   plotId: number;
   plotPlantId: number;
+  /** Hides per-entry deletion once the plot_plant is archived history. */
+  archived?: boolean;
 }
 
 const COLLAPSED_COUNT = 3;
@@ -41,7 +43,7 @@ function eventColor(eventType: string): string {
   return EVENT_COLORS[eventType as keyof typeof EVENT_COLORS] ?? "gray";
 }
 
-export default function PlantTimeline({ plotId, plotPlantId }: Props) {
+export default function PlantTimeline({ plotId, plotPlantId, archived }: Props) {
   const { data: entries, isLoading } = usePlantTimeline(plotId, plotPlantId);
   const deleteEntry = useDeleteTimelineEntry(plotId, plotPlantId);
   const [expanded, setExpanded] = useState(false);
@@ -95,21 +97,23 @@ export default function PlantTimeline({ plotId, plotPlantId }: Props) {
           className="group relative"
           style={{ position: "relative" }}
         >
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            size="md"
-            radius="xl"
-            aria-label="Delete entry"
-            style={{ position: "absolute", top: 0, right: 0 }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            loading={
-              deleteEntry.isPending && deleteEntry.variables === entry.id
-            }
-            onClick={() => deleteEntry.mutate(entry.id)}
-          >
-            <Trash2 size={16} />
-          </ActionIcon>
+          {!archived && (
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="md"
+              radius="xl"
+              aria-label="Delete entry"
+              style={{ position: "absolute", top: 0, right: 0 }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              loading={
+                deleteEntry.isPending && deleteEntry.variables === entry.id
+              }
+              onClick={() => deleteEntry.mutate(entry.id)}
+            >
+              <Trash2 size={16} />
+            </ActionIcon>
+          )}
           <Badge
             size="xs"
             variant="light"

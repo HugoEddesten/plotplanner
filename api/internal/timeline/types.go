@@ -40,6 +40,16 @@ type Entry struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// FeedEntry is a timeline entry annotated with its plant's identity — used
+// by the plot-wide activity feed, where entries span many plot_plants.
+type FeedEntry struct {
+	Entry
+	PlantName  string `json:"plant_name"`
+	Col        int    `json:"col"`
+	Row        int    `json:"row"`
+	IsArchived bool   `json:"is_archived"`
+}
+
 type CreateEntryRequest struct {
 	EventType string     `json:"event_type"`
 	EventDate *time.Time `json:"event_date"`
